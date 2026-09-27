@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyCoLLaDieGoooo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="min-h-screen">
+
+<div class="flex min-h-screen">
+  <aside id="sidebar" class="fixed md:static z-40 w-64 bg-[#111114] border-r border-[#2a2a2e] p-4 flex flex-col gap-2 h-screen overflow-y-auto -translate-x-full md:translate-x-0">
+    <div class="flex items-center gap-2 px-1 py-1">
+      <div class="logo-mark">M</div>
+      <div><div class="font-display text-base leading-tight text-white">MYCOLLA<br>DIEGOOOO</div><div class="text-xs" style="color:#ff5a00">tareas y documentos</div></div>
+    </div>
+    <div class="hazard"></div>
+    <button class="navlink active" data-route="inicio">Inicio</button>
+    <button class="navlink" data-route="tareas">Tareas</button>
+    <button class="navlink" data-route="biblioteca">Biblioteca</button>
+    <button class="navlink" data-route="archivos">Archivos</button>
+    <button class="navlink" id="nav-pochita">Pochita IA</button>
+    <button id="btn-new" class="btn-primary mt-3">+ NUEVA TAREA</button>
+    <div class="mt-auto text-xs px-2" style="color:#8a8578">Datos guardados en este navegador.</div>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <header class="sticky top-0 z-30 bg-[#111114]/95 backdrop-blur border-b border-[#2a2a2e] px-4 py-3 flex items-center gap-2">
+      <button id="btn-menu" class="md:hidden text-xl px-2">|||</button>
+      <input id="global-q" placeholder="Buscar: nombre, materia, profesor, archivo…" class="flex-1 bg-[#1e1e22] rounded px-4 py-2 text-sm border border-[#2a2a2e]" />
+      <button id="btn-theme" class="text-xl px-2">O</button>
+      <button id="btn-new-2" class="btn-primary text-sm whitespace-nowrap hidden sm:block">+ NUEVA</button>
+    </header>
+
+    <div class="p-4 max-w-6xl mx-auto">
+      <!-- INICIO -->
+      <section id="view-inicio">
+        <div class="card overflow-hidden mb-3">
+          <div class="hero-art p-5">
+            <h2 class="text-2xl mb-1">HOLA, DIEGO</h2>
+            <p class="text-sm mb-3" style="color:#d8d2c4">Tu resumen de hoy, simple y directo.</p>
+            <button class="btn-primary text-sm" onclick="nav('tareas')">VER TAREAS</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="card p-4"><div class="text-xs" style="color:#b9b3a5">TOTAL</div><div id="st-total" class="text-3xl font-display">0</div></div>
+          <div class="card p-4"><div class="text-xs" style="color:#b9b3a5">PENDIENTES</div><div id="st-pend" class="text-3xl font-display" style="color:#ff5a00">0</div></div>
+          <div class="card p-4"><div class="text-xs" style="color:#b9b3a5">COMPLETADAS</div><div id="st-comp" class="text-3xl font-display" style="color:#4ade80">0</div></div>
+          <div class="card p-4"><div class="text-xs" style="color:#b9b3a5">POR VENCER</div><div id="st-soon" class="text-3xl font-display" style="color:#e10600">0</div></div>
+        </div>
+        <div class="hidden"><span id="st-files">0</span><div id="bar-pend"></div><div id="bar-comp"></div></div>
+        <div class="card p-4 mt-3">
+          <div class="font-display text-sm mb-2">PROGRESO</div>
+          <div class="bar"><div id="bar-hunt" style="background:linear-gradient(90deg,#e10600,#ff5a00);width:0%"></div></div>
+          <div id="hunt-label" class="text-xs mt-1" style="color:#b9b3a5"></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3 mt-3">
+          <div class="card p-4"><div class="font-display text-sm mb-2">URGENTE</div><div id="home-due"></div></div>
+          <div class="card p-4"><div class="font-display text-sm mb-2">RECIENTES</div><div id="home-recent"></div></div>
+        </div>
+      </section>
+
+      <!-- TAREAS -->
+      <section id="view-tareas" class="hidden">
+        <h2 class="text-2xl mb-3">TAREAS</h2>
+        <p class="text-xs mb-3" style="color:#8a8578">Las completadas se conservan siempre. Nada se borra solo.</p>
+        <div class="flex gap-2 mb-3">
+          <button class="tabbtn active" data-tab="pendientes">PENDIENTES</button>
+          <button class="tabbtn" data-tab="completadas">COMPLETADAS</button>
+          <button class="tabbtn" data-tab="todas">TODAS</button>
+        </div>
+        <div class="card p-3 grid sm:grid-cols-4 gap-2 mb-3">
+          <input id="f-q" placeholder="Buscar…" class="sm:col-span-2 bg-[#1e1e22] rounded px-3 py-2 text-sm border border-[#2a2a2e]" />
+          <select id="flt-subject" class="bg-[#1e1e22] rounded px-2 py-2 text-sm border border-[#2a2a2e]"><option value="">Todas las materias</option></select>
+          <select id="f-sort" class="bg-[#1e1e22] rounded px-2 py-2 text-sm border border-[#2a2a2e]"><option value="due">Orden: entrega</option><option value="created">Orden: creación</option><option value="name">Orden: nombre</option></select>
+        </div>
+        <div id="count-all" class="text-sm mb-2" style="color:#b9b3a5"></div>
+        <div id="all-list" class="grid md:grid-cols-2 gap-3"></div>
+      </section>
+
+      <!-- BIBLIOTECA -->
+      <section id="view-biblioteca" class="hidden">
+        <div class="card p-5 mb-3">
+          <h2 class="text-2xl mb-1">BIBLIOTECA</h2>
+          <p class="text-sm" style="color:#b9b3a5">Documentos y notas de investigación por materia y fecha. No son tareas.</p>
+          <button id="btn-new-doc" class="btn-primary text-sm mt-3">+ NUEVO DOCUMENTO</button>
+        </div>
+        <div class="card p-3 grid sm:grid-cols-3 gap-2 mb-3">
+          <input id="doc-q" placeholder="Buscar documento o nota…" class="bg-[#1e1e22] rounded px-3 py-2 text-sm border border-[#2a2a2e]" />
+          <select id="doc-subject" class="bg-[#1e1e22] rounded px-2 py-2 text-sm border border-[#2a2a2e]"><option value="">Todas las materias</option></select>
+          <select id="doc-sort" class="bg-[#1e1e22] rounded px-2 py-2 text-sm border border-[#2a2a2e]"><option value="date">Orden: fecha</option><option value="created">Orden: agregado</option><option value="name">Orden: nombre</option></select>
+        </div>
+        <div id="count-docs" class="text-sm mb-2" style="color:#b9b3a5"></div>
+        <div id="docs-list" class="grid md:grid-cols-2 gap-3"></div>
+      </section>
+
+      <!-- ARCHIVOS -->
+      <section id="view-archivos" class="hidden">
+        <div class="flex items-center justify-between mb-3"><h2 class="text-2xl">ARCHIVOS</h2><span id="count-files" class="text-sm" style="color:#b9b3a5"></span></div>
+        <input id="file-q" placeholder="Buscar archivo…" class="w-full bg-[#1e1e22] border border-[#2a2a2e] rounded px-4 py-2 text-sm mb-3" />
+        <div id="files-list" class="space-y-2"></div>
+        <div class="hidden" id="files-recent"></div>
+      </section>
+
+      <!-- compat oculto -->
+      <section id="view-pendientes" class="hidden"><div id="pendientes-list"></div><span id="count-pendientes"></span></section>
+      <section id="view-completados" class="hidden"><div id="completados-list"></div><span id="count-completados"></span></section>
+      <section id="view-todas" class="hidden"></section>
+      <section id="view-materias" class="hidden"><div id="subj-list"></div></section>
+      <div class="hidden"><input id="new-subj" /><input id="new-subj-color" type="hidden" /><button id="btn-add-subj"></button><select id="cf-status"><option value=""></option></select><select id="cf-priority"><option value=""></option></select><div id="home-fav"></div><div id="home-act"></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- POCHITA IA -->
+<button id="pochita-fab" class="fixed bottom-5 right-5 z-50 w-16 h-16 rounded-full border-2 border-[#ff5a00] bg-[#e10600] text-white font-display text-2xl" title="Pochita IA">P</button>
+<div id="pochita-panel" class="hidden fixed bottom-24 right-4 z-50 w-80 max-w-[90vw] bg-[#151518] border border-[#2a2a2e] rounded-xl overflow-hidden flex flex-col" style="height:430px">
+  <div class="p-3 border-b border-[#2a2a2e] flex justify-between items-center gap-2" style="background:linear-gradient(90deg,#8f0400,#e10600)">
+    <span class="avatar-sm">P</span>
+    <b class="font-display text-sm text-white flex-1">POCHITA IA</b>
+    <button id="pochita-close" class="text-white font-bold px-2">X</button>
+  </div>
+  <div id="pochita-msgs" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm"></div>
+  <div class="p-2 flex flex-wrap gap-1 border-t border-[#2a2a2e]">
+    <button class="qchip" data-q="Que vence manana">Vence mañana</button>
+    <button class="qchip" data-q="Cuantas pendientes tengo">Pendientes</button>
+    <button class="qchip" data-q="Que tengo de Matematicas">Matemáticas</button>
+  </div>
+  <div class="p-2 flex gap-2 border-t border-[#2a2a2e]">
+    <input id="pochita-input" placeholder="Pregunta…" class="flex-1 bg-[#1e1e22] rounded px-3 py-2 text-sm border border-[#2a2a2e]" />
+    <button id="pochita-send" class="btn-primary text-sm">OK</button>
+  </div>
+</div>
+
+<!-- MODAL TAREA -->
+<div id="modal-form" class="hidden fixed inset-0 z-50 modal-bg flex items-end sm:items-center justify-center p-2">
+  <div class="fade-in bg-[#151518] border border-[#2a2a2e] w-full max-w-xl rounded-xl p-4 max-h-[92vh] overflow-y-auto">
+    <h3 id="form-title-h" class="font-display mb-3">+ NUEVA TAREA</h3>
+    <div class="grid gap-2">
+      <input id="f-title" placeholder="Título *" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+      <div class="grid grid-cols-2 gap-2">
+        <input id="f-subject" list="subjects-dl" placeholder="Materia" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+        <datalist id="subjects-dl"></datalist>
+        <input id="f-due" type="date" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <select id="f-priority" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"><option>Baja</option><option selected>Media</option><option>Alta</option></select>
+        <select id="f-status" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"><option value="pendiente">Pendiente</option><option value="completada">Completada</option></select>
+      </div>
+      <textarea id="f-desc" placeholder="Descripción corta" rows="2" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"></textarea>
+      <details class="card p-3 text-sm"><summary class="cursor-pointer font-display text-xs">MAS OPCIONES (profesor, etiquetas, enlaces, notas)</summary>
+        <div class="grid gap-2 mt-2">
+          <input id="f-teacher" placeholder="Profesor" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+          <input id="f-tags" placeholder="Etiquetas (coma)" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+          <textarea id="f-links" placeholder="Enlaces (uno por línea)" rows="2" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"></textarea>
+          <textarea id="f-notes" placeholder="Notas" rows="2" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"></textarea>
+          <label class="text-sm flex items-center gap-2"><input id="f-fav" type="checkbox" class="w-4 h-4" /> Destacada</label>
+        </div>
+      </details>
+    </div>
+    <div class="mt-3">
+      <div class="text-sm font-bold mb-1">Archivos (máx 25MB c/u)</div>
+      <div id="dropzone" class="border-2 border-dashed border-[#ff5a00] rounded p-4 text-center text-sm cursor-pointer" style="color:#b9b3a5">Arrastra o clic para elegir<br><input id="f-files" type="file" multiple class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.zip" /></div>
+      <div id="pending-list" class="mt-2"></div>
+      <div id="existing-list" class="mt-1"></div>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button id="btn-cancel" class="flex-1 bg-[#2a2a2e] font-display text-sm rounded py-2.5">CANCELAR</button>
+      <button id="btn-save" class="flex-1 btn-primary">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DOCUMENTO -->
+<div id="modal-doc" class="hidden fixed inset-0 z-50 modal-bg flex items-end sm:items-center justify-center p-2">
+  <div class="fade-in bg-[#151518] border border-[#2a2a2e] w-full max-w-xl rounded-xl p-4 max-h-[92vh] overflow-y-auto">
+    <h3 id="doc-form-title" class="font-display mb-3">+ NUEVO DOCUMENTO</h3>
+    <div class="grid gap-2">
+      <input id="d-title" placeholder="Título *" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+      <div class="grid grid-cols-2 gap-2">
+        <input id="d-subject" list="subjects-dl" placeholder="Materia" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+        <input id="d-date" type="date" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]" />
+      </div>
+      <textarea id="d-notes" placeholder="Notas de investigación…" rows="4" class="border border-[#2a2a2e] rounded px-3 py-2 text-sm bg-[#1e1e22]"></textarea>
+    </div>
+    <div class="mt-3">
+      <div class="text-sm font-bold mb-1">Archivos (varios por documento)</div>
+      <div id="dropzone-doc" class="border-2 border-dashed border-[#ff5a00] rounded p-4 text-center text-sm cursor-pointer" style="color:#b9b3a5">Arrastra o clic para elegir<br><input id="d-files" type="file" multiple class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.zip" /></div>
+      <div id="doc-pending-list" class="mt-2"></div>
+      <div id="doc-existing-list" class="mt-1"></div>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button id="btn-doc-cancel" class="flex-1 bg-[#2a2a2e] font-display text-sm rounded py-2.5">CANCELAR</button>
+      <button id="btn-doc-save" class="flex-1 btn-primary">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div id="modal-detail" class="hidden fixed inset-0 z-50 modal-bg flex items-end sm:items-center justify-center p-2">
+  <div class="fade-in bg-[#151518] border border-[#2a2a2e] w-full max-w-xl rounded-xl p-4 max-h-[92vh] overflow-y-auto">
+    <div id="d-body"></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+      <button id="btn-d-edit" class="bg-[#ff5a00] text-black font-display text-xs rounded py-2">EDITAR</button>
+      <button id="btn-d-complete" class="bg-green-700 text-white font-display text-xs rounded py-2">COMPLETAR</button>
+      <button id="btn-d-del" class="bg-[#e10600] text-white font-display text-xs rounded py-2">ELIMINAR</button>
+      <button id="btn-d-close" class="bg-[#2a2a2e] font-display text-xs rounded py-2">CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVIEW (amplio para PDF) -->
+<div id="modal-preview" class="hidden fixed inset-0 z-50 modal-bg flex items-center justify-center p-2">
+  <div class="fade-in bg-[#151518] border border-[#2a2a2e] w-full max-w-6xl rounded-xl p-4 max-h-[94vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-2 gap-2"><b id="p-title" class="truncate text-sm"></b><button id="btn-p-close" class="font-bold px-3 py-1 bg-[#2a2a2e] rounded">X</button></div>
+    <div id="p-body"></div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div id="modal-confirm" class="hidden fixed inset-0 z-50 modal-bg flex items-center justify-center p-4">
+  <div class="fade-in bg-[#151518] border border-[#e10600] rounded-xl p-5 max-w-sm w-full">
+    <h3 id="c-title" class="font-display"></h3>
+    <p id="c-msg" class="text-sm mt-1" style="color:#b9b3a5"></p>
+    <div class="flex gap-2 mt-4"><button id="btn-confirm-no" class="flex-1 bg-[#2a2a2e] font-display text-sm rounded py-2">NO</button><button id="btn-confirm-yes" class="flex-1 bg-[#e10600] text-white font-display text-sm rounded py-2">SI, ELIMINAR</button></div>
+  </div>
+</div>
+
+<div id="toasts" class="fixed bottom-4 left-4 z-[60] space-y-2 w-72"></div>
+
+<script src="js/db.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
