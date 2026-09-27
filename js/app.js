@@ -20,14 +20,14 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
 function fmtDate(iso) { if (!iso) return 'Sin fecha'; const d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }); }
 function daysLeft(iso) { if (!iso) return null; const a = new Date(); a.setHours(0,0,0,0); const b = new Date(iso + 'T12:00:00'); b.setHours(0,0,0,0); return Math.round((b - a) / 86400000); }
 function dueLabel(t) {
-  if (t.status === 'completada') return { text: 'COMPLETADA', cls: 'background:#14532d;color:#bbf7d0' };
+  if (t.status === 'completada') return { text: 'COMPLETADA', cls: 'due-completada' };
   const d = daysLeft(t.dueDate);
-  if (d === null || isNaN(d)) return { text: 'SIN FECHA', cls: 'background:#2a2a2e;color:#b9b3a5' };
-  if (d < 0) return { text: 'VENCIDA', cls: 'background:#e10600;color:#fff', over: true };
-  if (d === 0) return { text: 'ENTREGA HOY', cls: 'background:#ff5a00;color:#000', soon: true };
-  if (d === 1) return { text: 'ENTREGA MANANA', cls: 'background:#ff5a00;color:#000', soon: true };
-  if (d <= 3) return { text: `EN ${d} DIAS`, cls: 'background:#7c2d12;color:#fed7aa', soon: true };
-  return { text: `EN ${d} DIAS`, cls: 'background:#1e1e22;color:#b9b3a5' };
+  if (d === null || isNaN(d)) return { text: 'SIN FECHA', cls: 'due-sin' };
+  if (d < 0) return { text: 'VENCIDA', cls: 'due-vencida', over: true };
+  if (d === 0) return { text: 'ENTREGA HOY', cls: 'due-hoy', soon: true };
+  if (d === 1) return { text: 'ENTREGA MANANA', cls: 'due-hoy', soon: true };
+  if (d <= 3) return { text: `EN ${d} DIAS`, cls: 'due-pronto', soon: true };
+  return { text: `EN ${d} DIAS`, cls: 'due-normal' };
 }
 function subjColor(name) { const s = Store.s.subjects.find(x => x.name === name); return s ? s.color : '#ff5a00'; }
 function fileExt(name) { return (name.split('.').pop() || '').toLowerCase(); }
@@ -54,7 +54,7 @@ function nav(r) {
   if (r === 'materias') r = 'biblioteca';
   route = r;
   $$('.navlink[data-route]').forEach(b => b.classList.toggle('active', b.dataset.route === r));
-  ['inicio', 'tareas', 'biblioteca', 'archivos'].forEach(v => { const el = $('#view-' + v); if (el) el.classList.toggle('hidden', v !== r); });
+  ['inicio', 'tareas', 'biblioteca', 'archivos', 'personalizar'].forEach(v => { const el = $('#view-' + v); if (el) el.classList.toggle('hidden', v !== r); });
   ['pendientes', 'completados', 'todas', 'materias'].forEach(v => { const el = $('#view-' + v); if (el) el.classList.add('hidden'); });
   const sb = $('#sidebar'); if (sb && window.innerWidth < 768) sb.classList.add('-translate-x-full');
   $$('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tareaTab));
@@ -62,6 +62,7 @@ function nav(r) {
   if (r === 'tareas') renderAll();
   if (r === 'biblioteca') renderDocs();
   if (r === 'archivos') renderFiles();
+  if (r === 'personalizar') renderCustomize();
   window.scrollTo(0, 0);
 }
 
@@ -85,17 +86,17 @@ function renderHome() {
   const bar = $('#bar-hunt'); if (bar) bar.style.width = pct + '%';
   const lb = $('#hunt-label'); if (lb) lb.textContent = s.total ? `${pct}% completado. ${s.comp} de ${s.total} tareas listas. Todo lo completado queda guardado.` : 'Sin tareas todavia. Crea la primera con + Nueva tarea.';
   const rec = [...Store.s.tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4);
-  $('#home-recent').innerHTML = rec.length ? rec.map(miniTask).join('') : '<p class="text-sm" style="color:#8a8578">Sin tareas todavia.</p>';
+  $('#home-recent').innerHTML = rec.length ? rec.map(miniTask).join('') : '<p class="text-sm" data-m="2">Sin tareas todavia.</p>';
   const venc = Store.s.tasks.filter(t => t.status !== 'completada' && (daysLeft(t.dueDate) ?? 99) <= 3).sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '')).slice(0, 4);
-  $('#home-due').innerHTML = venc.length ? venc.map(miniTask).join('') : '<p class="text-sm" style="color:#8a8578">Nada urgente.</p>';
+  $('#home-due').innerHTML = venc.length ? venc.map(miniTask).join('') : '<p class="text-sm" data-m="2">Nada urgente.</p>';
 }
 function miniTask(t) {
   const d = dueLabel(t);
   return `<div onclick="openDetail('${t.id}')" class="task-card card p-3 mb-2 flex items-center gap-3">
     <button onclick="event.stopPropagation();toggleFav('${t.id}')" class="text-lg" style="color:#ff5a00">${t.favorite ? '★' : '☆'}</button>
     <div class="flex-1 min-w-0"><div class="font-semibold truncate text-sm">${esc(t.title)}</div>
-    <div class="text-xs truncate" style="color:#8a8578">${esc(t.subject || '')} · ${fmtDate(t.dueDate)}</div></div>
-    <span class="badge" style="${d.cls}">${d.text}</span></div>`;
+    <div class="text-xs truncate" data-m="2">${esc(t.subject || '')} · ${fmtDate(t.dueDate)}</div></div>
+    <span class="badge ${d.cls}">${d.text}</span></div>`;
 }
 
 // ---------- TAREAS ----------
@@ -106,7 +107,7 @@ function taskCard(t) {
   return `<div class="task-card card p-4 ${over} flex flex-col gap-2" onclick="openDetail('${t.id}')">
     <div class="flex items-start justify-between gap-2">
       <div class="font-bold leading-tight text-sm">${t.favorite ? '★ ' : ''}${esc(t.title)}</div>
-      <span class="badge" style="${d.cls}">${d.text}</span>
+      <span class="badge ${d.cls}">${d.text}</span>
     </div>
     <div class="flex flex-wrap gap-1 text-xs">
       ${t.subject ? `<span class="chip" style="border-color:${subjColor(t.subject)};color:${subjColor(t.subject)}">${esc(t.subject)}</span>` : ''}
@@ -114,11 +115,11 @@ function taskCard(t) {
       ${(t.tags || []).map(g => `<span class="chip">#${esc(g)}</span>`).join('')}
       ${files.length ? `<span class="chip">${files.length} adjuntos</span>` : ''}
     </div>
-    ${t.description ? `<p class="text-sm line-clamp-2" style="color:#b9b3a5">${esc(t.description)}</p>` : ''}
-    <div class="text-xs" style="color:#8a8578">${fmtDate(t.dueDate)}</div>
+    ${t.description ? `<p class="text-sm line-clamp-2" data-m="1">${esc(t.description)}</p>` : ''}
+    <div class="text-xs" data-m="2">${fmtDate(t.dueDate)}</div>
     <div class="flex gap-2 pt-1" onclick="event.stopPropagation()">
       ${t.status !== 'completada' ? `<button onclick="setStatus('${t.id}','completada')" class="text-xs font-display bg-green-700 text-white px-3 py-1.5 rounded">COMPLETAR</button>` : `<button onclick="setStatus('${t.id}','pendiente')" class="text-xs font-display bg-[#ff5a00] text-black px-3 py-1.5 rounded">VOLVER A PENDIENTE</button>`}
-      <button onclick="toggleFav('${t.id}')" class="text-xs font-bold bg-[#2a2a2e] px-3 py-1.5 rounded">${t.favorite ? '★' : '☆'}</button>
+      <button onclick="toggleFav('${t.id}')" class="text-xs font-bold bg-gray-200 dark:bg-[#2a2a2e] px-3 py-1.5 rounded">${t.favorite ? '★' : '☆'}</button>
     </div></div>`;
 }
 function filteredTasks() {
@@ -134,7 +135,7 @@ function filteredTasks() {
 }
 function renderAll() {
   const list = filteredTasks();
-  $('#all-list').innerHTML = list.length ? list.map(taskCard).join('') : '<div class="card p-8 text-center text-sm" style="color:#8a8578">Sin tareas en esta vista.</div>';
+  $('#all-list').innerHTML = list.length ? list.map(taskCard).join('') : '<div class="card p-8 text-center text-sm" data-m="2">Sin tareas en esta vista.</div>';
   $('#count-all').textContent = list.length + ' de ' + Store.s.tasks.length + ' (las completadas se conservan)';
   const subs = [...new Set(Store.s.tasks.map(t => t.subject).filter(Boolean))];
   const sel = $('#flt-subject');
@@ -162,19 +163,19 @@ function renderDocs() {
   const subs = [...new Set((Store.s.docs || []).map(d => d.subject).filter(Boolean))];
   const sel = $('#doc-subject');
   if (sel) sel.innerHTML = '<option value="">Todas las materias</option>' + subs.map(s => `<option ${docFilters.subject === s ? 'selected' : ''}>${esc(s)}</option>`).join('');
-  $('#docs-list').innerHTML = list.length ? list.map(docCard).join('') : '<div class="card p-8 text-center text-sm" style="color:#8a8578">Sin documentos. Agrega el primero con + Nuevo documento.</div>';
+  $('#docs-list').innerHTML = list.length ? list.map(docCard).join('') : '<div class="card p-8 text-center text-sm" data-m="2">Sin documentos. Agrega el primero con + Nuevo documento.</div>';
 }
 function docCard(d) {
   const files = Store.s.files.filter(f => f.docId === d.id);
   return `<div class="card p-4 flex flex-col gap-2">
     <div class="flex items-start justify-between gap-2">
       <div class="font-bold text-sm">${esc(d.title)}</div>
-      <span class="badge" style="background:#1e1e22;color:#b9b3a5">${fmtDate(d.docDate)}</span>
+      <span class="badge due-normal">${fmtDate(d.docDate)}</span>
     </div>
     ${d.subject ? `<div><span class="chip" style="border-color:${subjColor(d.subject)};color:${subjColor(d.subject)}">${esc(d.subject)}</span></div>` : ''}
-    ${d.notes ? `<p class="text-sm whitespace-pre-wrap" style="color:#b9b3a5">${esc(d.notes)}</p>` : ''}
+    ${d.notes ? `<p class="text-sm whitespace-pre-wrap" data-m="1">${esc(d.notes)}</p>` : ''}
     <div class="space-y-1">${files.map(f => `
-      <div class="flex items-center gap-2 text-sm bg-[#1e1e22] rounded px-2 py-1">
+      <div class="flex items-center gap-2 text-sm bg-gray-100 dark:bg-[#1e1e22] rounded px-2 py-1">
         ${fileTag(f.ext)}
         <span class="flex-1 truncate text-xs">${esc(f.name)} · ${fmtSize(f.size)}</span>
         <button onclick="previewFile('${f.id}')" class="text-xs font-bold underline">Ver</button>
@@ -246,12 +247,12 @@ function renderFiles() {
     <div class="card p-3 flex items-center gap-3">
       ${fileTag(f.ext)}
       <div class="flex-1 min-w-0"><div class="font-semibold truncate text-sm">${esc(f.name)}</div>
-      <div class="text-xs" style="color:#8a8578">${fmtSize(f.size)} · ${new Date(f.uploadedAt).toLocaleDateString('es-DO')} · ${esc(ownerName(f))}</div></div>
+      <div class="text-xs" data-m="2">${fmtSize(f.size)} · ${new Date(f.uploadedAt).toLocaleDateString('es-DO')} · ${esc(ownerName(f))}</div></div>
       <div class="flex gap-1">
         <button onclick="previewFile('${f.id}')" class="text-xs font-bold bg-[#ff5a00] text-black px-2 py-1 rounded">Ver</button>
-        <button onclick="downloadFile('${f.id}')" class="text-xs font-bold bg-[#2a2a2e] px-2 py-1 rounded">Bajar</button>
+        <button onclick="downloadFile('${f.id}')" class="text-xs font-bold bg-gray-200 dark:bg-[#2a2a2e] px-2 py-1 rounded">Bajar</button>
         <button onclick="removeFile('${f.id}')" class="text-xs font-bold bg-[#e10600] text-white px-2 py-1 rounded">Quitar</button>
-      </div></div>`).join('') : '<div class="card p-8 text-center text-sm" style="color:#8a8578">Sin archivos todavia.</div>';
+      </div></div>`).join('') : '<div class="card p-8 text-center text-sm" data-m="2">Sin archivos todavia.</div>';
   $('#count-files').textContent = files.length + ' archivos';
 }
 
@@ -277,6 +278,7 @@ function refresh() {
   if (route === 'tareas') renderAll();
   if (route === 'biblioteca') renderDocs();
   if (route === 'archivos') renderFiles();
+  if (route === 'personalizar') renderCustomize();
   if (detailId) renderDetail();
 }
 
@@ -362,7 +364,7 @@ function renderDetail() {
   $('#d-body').innerHTML = `
     <div class="flex items-start justify-between gap-2">
       <h3 class="font-display leading-tight">${t.favorite ? '★ ' : ''}${esc(t.title)}</h3>
-      <span class="badge" style="${d.cls}">${d.text}</span>
+      <span class="badge ${d.cls}">${d.text}</span>
     </div>
     <div class="flex flex-wrap gap-1 mt-2 text-xs">
       ${t.subject ? `<span class="chip" style="border-color:${subjColor(t.subject)};color:${subjColor(t.subject)}">${esc(t.subject)}</span>` : ''}
@@ -374,16 +376,16 @@ function renderDetail() {
       <div class="card p-3">Profesor<br><b>${esc(t.teacher || 'Sin dato')}</b></div>
       <div class="card p-3">Entrega<br><b>${fmtDate(t.dueDate)}</b></div>
     </div>
-    ${t.description ? `<p class="mt-3 text-sm whitespace-pre-wrap" style="color:#b9b3a5">${esc(t.description)}</p>` : ''}
+    ${t.description ? `<p class="mt-3 text-sm whitespace-pre-wrap" data-m="1">${esc(t.description)}</p>` : ''}
     <div class="mt-3 text-sm font-display text-xs">ARCHIVOS (${files.length})</div>
     <div class="mt-2 space-y-2">${files.length ? files.map(f => `
       <div class="card p-2 flex items-center gap-2 text-sm">
         ${fileTag(f.ext)}
-        <div class="flex-1 min-w-0"><div class="font-semibold truncate text-sm">${esc(f.name)}</div><div class="text-xs" style="color:#8a8578">${fmtSize(f.size)}</div></div>
+        <div class="flex-1 min-w-0"><div class="font-semibold truncate text-sm">${esc(f.name)}</div><div class="text-xs" data-m="2">${fmtSize(f.size)}</div></div>
         <button onclick="previewFile('${f.id}')" class="text-xs font-bold underline">Ver</button>
         <button onclick="downloadFile('${f.id}')" class="text-xs font-bold underline">Bajar</button>
         <button onclick="removeFile('${f.id}')" class="text-xs font-bold underline" style="color:#e10600">Quitar</button>
-      </div>`).join('') : '<p class="text-xs" style="color:#8a8578">Sin archivos.</p>'}</div>`;
+      </div>`).join('') : '<p class="text-xs" data-m="2">Sin archivos.</p>'}</div>`;
   $('#btn-d-complete').textContent = t.status === 'completada' ? 'VOLVER A PENDIENTE' : 'COMPLETAR';
 }
 
@@ -392,7 +394,7 @@ async function blobUrl(id) { const b = await DB.get(id); return b ? URL.createOb
 async function openFile(id) { const url = await blobUrl(id); if (!url) { toast('No se pudo abrir', 'err'); return; } window.open(url, '_blank'); }
 async function downloadFile(id) {
   const f = Store.s.files.find(x => x.id === id); if (!f) return;
-  const url = await blobUrl(id); if (!url) { toast('No se pudo descargar', 'err'); return; }
+  const url = await blobUrl(id); if (!url) { toast('Ese archivo está en el equipo donde se subió', 'err'); return; }
   const a = document.createElement('a'); a.href = url; a.download = f.name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
@@ -413,15 +415,15 @@ function renameFile(id) {
 }
 async function previewFile(id) {
   const f = Store.s.files.find(x => x.id === id); if (!f) return;
-  const url = await blobUrl(id); if (!url) { toast('No se pudo mostrar', 'err'); return; }
+  const url = await blobUrl(id); if (!url) { toast('Ese archivo está en el equipo donde se subió', 'err'); return; }
   $('#p-title').textContent = f.name;
   const img = ['jpg', 'jpeg', 'png', 'webp'].includes(f.ext);
   const txt = ['txt', 'csv'].includes(f.ext);
   let html = '';
   if (f.ext === 'pdf') html = `<iframe src="${url}" class="w-full" style="height:80vh" frameborder="0"></iframe>`;
   else if (img) html = `<img src="${url}" class="w-full rounded" style="max-height:80vh;object-fit:contain" />`;
-  else if (txt) { const b = await DB.get(id); const t = await b.text(); html = `<pre class="text-xs bg-[#1e1e22] p-3 rounded overflow-auto" style="max-height:80vh">${esc(t.slice(0, 30000))}</pre>`; }
-  else html = `<div class="text-center py-8"><div class="text-5xl font-display">[${esc(f.ext.toUpperCase())}]</div><p class="mt-2 text-sm" style="color:#8a8578">${fmtSize(f.size)}. Sin vista previa.</p><button onclick="downloadFile('${f.id}')" class="btn-primary mt-4 text-sm">DESCARGAR</button></div>`;
+  else if (txt) { const b = await DB.get(id); const t = await b.text(); html = `<pre class="text-xs bg-gray-100 dark:bg-[#1e1e22] p-3 rounded overflow-auto" style="max-height:80vh">${esc(t.slice(0, 30000))}</pre>`; }
+  else html = `<div class="text-center py-8"><div class="text-5xl font-display">[${esc(f.ext.toUpperCase())}]</div><p class="mt-2 text-sm" data-m="2">${fmtSize(f.size)}. Sin vista previa.</p><button onclick="downloadFile('${f.id}')" class="btn-primary mt-4 text-sm">DESCARGAR</button></div>`;
   $('#p-body').innerHTML = html;
   $('#modal-preview').classList.remove('hidden');
 }
@@ -477,16 +479,153 @@ function pochitaSend(text) {
 function editSubject() {}
 function delSubject() {}
 
+// ---------- APARIENCIA / PERSONALIZAR ----------
+const DISPLAY_FONTS = {
+  'Bungee': 'family=Bungee',
+  'Bebas Neue': 'family=Bebas+Neue',
+  'Montserrat': 'family=Montserrat:wght@800',
+  'Chakra Petch': 'family=Chakra+Petch:wght@700',
+};
+function loadDisplayFont(name) {
+  const fam = DISPLAY_FONTS[name] || DISPLAY_FONTS['Bungee'];
+  let link = document.getElementById('font-display-link');
+  if (!link) { link = document.createElement('link'); link.id = 'font-display-link'; link.rel = 'stylesheet'; document.head.appendChild(link); }
+  const href = 'https://fonts.googleapis.com/css2?' + fam + '&display=swap';
+  if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+}
+function applyAppearance() {
+  const a = (Store.s && Store.s.appearance) || {};
+  const r = document.documentElement.style;
+  r.setProperty('--blood', a.brand || '#e10600');
+  r.setProperty('--blood-dark', a.brandDark || '#8f0400');
+  r.setProperty('--saw', a.accent || '#ff5a00');
+  r.setProperty('--bg', a.bg || '#ffffff');
+  r.setProperty('--panel', a.panel || '#ffffff');
+  r.setProperty('--ink', a.ink || '#111827');
+  r.setProperty('--line', a.line || '#e5e7eb');
+  r.setProperty('--m1', a.m1 || '#475569');
+  r.setProperty('--m2', a.m2 || '#64748b');
+  r.setProperty('--radius', (a.radius ?? 14) + 'px');
+  r.setProperty('--font-display', `'${a.font || 'Bungee'}','Chakra Petch',sans-serif`);
+  loadDisplayFont(a.font || 'Bungee');
+  document.body.classList.toggle('nodots', a.dots === false);
+  document.body.classList.toggle('nograin', a.grain === false);
+  document.body.classList.toggle('noanim', a.btnAnim === false);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const bn = document.getElementById('brand-name');
+  if (bn) bn.innerHTML = esc(a.siteName || '').replace(/\n/g, '<br>');
+  set('brand-sub', a.siteSub || '');
+  set('brand-logo', (a.logoLetter || 'M').slice(0, 2));
+  set('hero-title', a.heroTitle || '');
+  set('hero-sub', a.heroSub || '');
+  document.title = a.tabTitle || 'MyCoLLaDieGoooo';
+}
+
+const CUS_COLORS = [
+  ['brand', 'Primario (botones, detalles)'],
+  ['brandDark', 'Primario oscuro'],
+  ['accent', 'Acento (bordes, avisos)'],
+  ['bg', 'Fondo de página'],
+  ['panel', 'Tarjetas y paneles'],
+  ['ink', 'Texto principal'],
+  ['line', 'Bordes y líneas'],
+  ['m1', 'Texto secundario'],
+  ['m2', 'Texto tenue'],
+];
+function renderCustomize() {
+  const wrap = $('#custom-wrap'); if (!wrap) return;
+  if (wrap.contains(document.activeElement)) return; // no interrumpir edición
+  const a = Store.s.appearance;
+  const fontOpts = Object.keys(DISPLAY_FONTS).map((f) => `<option ${a.font === f ? 'selected' : ''}>${f}</option>`).join('');
+  wrap.innerHTML = `
+    <div class="card p-4">
+      <div class="font-display text-sm mb-2">TEXTOS Y NOMBRES</div>
+      <div class="grid gap-2">
+        <div><label class="cus-label">Nombre del sitio (una línea por renglón)</label>
+          <textarea id="cu-siteName" rows="2" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]">${esc(a.siteName)}</textarea></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="cus-label">Subtítulo</label><input id="cu-siteSub" value="${esc(a.siteSub)}" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]" /></div>
+          <div><label class="cus-label">Letra del logo</label><input id="cu-logoLetter" value="${esc(a.logoLetter)}" maxlength="2" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]" /></div>
+        </div>
+        <div><label class="cus-label">Saludo principal</label><input id="cu-heroTitle" value="${esc(a.heroTitle)}" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]" /></div>
+        <div><label class="cus-label">Subtítulo del saludo</label><input id="cu-heroSub" value="${esc(a.heroSub)}" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]" /></div>
+        <div><label class="cus-label">Título de la pestaña</label><input id="cu-tabTitle" value="${esc(a.tabTitle)}" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]" /></div>
+      </div>
+    </div>
+    <div class="card p-4">
+      <div class="font-display text-sm mb-2">COLORES</div>
+      <div class="grid sm:grid-cols-2 gap-2">
+        ${CUS_COLORS.map(([k, label]) => `
+          <div class="cus-row"><input type="color" class="cus-color" data-ck="${k}" value="${esc(a[k])}" />
+          <div><div class="text-sm font-bold">${label}</div><div class="cus-hex" data-hex="${k}" data-m="2">${esc(a[k])}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card p-4">
+      <div class="font-display text-sm mb-2">LETRA Y FORMA</div>
+      <div class="grid gap-3">
+        <div><label class="cus-label">Tipo de letra de títulos</label>
+          <select id="cu-font" class="w-full bg-gray-100 dark:bg-[#1e1e22] rounded px-3 py-2 text-sm border border-gray-200 dark:border-[#2a2a2e]">${fontOpts}</select></div>
+        <div><label class="cus-label">Esquinas redondeadas: <span id="cu-radius-v">${a.radius}</span>px</label>
+          <input id="cu-radius" type="range" min="0" max="24" value="${a.radius}" class="w-full" /></div>
+        <label class="text-sm flex items-center gap-2"><input id="cu-dots" type="checkbox" class="w-4 h-4" ${a.dots ? 'checked' : ''} /> Puntos de fondo</label>
+        <label class="text-sm flex items-center gap-2"><input id="cu-grain" type="checkbox" class="w-4 h-4" ${a.grain ? 'checked' : ''} /> Textura fina</label>
+        <label class="text-sm flex items-center gap-2"><input id="cu-btnAnim" type="checkbox" class="w-4 h-4" ${a.btnAnim ? 'checked' : ''} /> Animación de botones</label>
+      </div>
+    </div>
+    <button id="btn-cus-reset" class="bg-gray-200 dark:bg-[#2a2a2e] font-display text-sm rounded py-2.5 px-4">RESTABLECER TODO</button>`;
+
+  const live = (fn) => { fn(); applyAppearance(); };
+  const persist = () => Store.setAppearance({});
+  const texts = [['cu-siteName', 'siteName'], ['cu-siteSub', 'siteSub'], ['cu-logoLetter', 'logoLetter'], ['cu-heroTitle', 'heroTitle'], ['cu-heroSub', 'heroSub'], ['cu-tabTitle', 'tabTitle']];
+  for (const [id, k] of texts) {
+    const el = document.getElementById(id); if (!el) continue;
+    el.addEventListener('input', () => live(() => { Store.s.appearance[k] = el.value; }));
+    el.addEventListener('change', persist);
+  }
+  wrap.querySelectorAll('[data-ck]').forEach((el) => {
+    const k = el.dataset.ck;
+    el.addEventListener('input', () => live(() => {
+      Store.s.appearance[k] = el.value;
+      const hx = wrap.querySelector(`[data-hex="${k}"]`); if (hx) hx.textContent = el.value;
+    }));
+    el.addEventListener('change', persist);
+  });
+  const font = $('#cu-font');
+  if (font) { font.addEventListener('change', () => { Store.s.appearance.font = font.value; applyAppearance(); persist(); }); }
+  const radius = $('#cu-radius');
+  if (radius) {
+    radius.addEventListener('input', () => live(() => {
+      Store.s.appearance.radius = +radius.value;
+      const v = $('#cu-radius-v'); if (v) v.textContent = radius.value;
+    }));
+    radius.addEventListener('change', persist);
+  }
+  for (const [id, k] of [['cu-dots', 'dots'], ['cu-grain', 'grain'], ['cu-btnAnim', 'btnAnim']]) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { Store.s.appearance[k] = el.checked; applyAppearance(); persist(); });
+  }
+  const rs = $('#btn-cus-reset');
+  if (rs) rs.onclick = () => askConfirm('Restablecer apariencia', 'Volver a los nombres y colores originales?', () => {
+    Store.setAppearance({ ...Store.defaults.appearance });
+    applyAppearance(); renderCustomize(); toast('Apariencia restablecida');
+  });
+}
+
 // ---------- INIT ----------
 function applyTheme() {
-  const dark = Store.s.theme !== 'light';
+  const dark = Store.s.theme === 'dark';
   document.documentElement.classList.toggle('dark', dark);
-  const b = $('#btn-theme'); if (b) b.textContent = dark ? 'O' : 'X';
+  const b = $('#btn-theme'); if (b) b.textContent = dark ? 'Claro' : 'Oscuro';
 }
 function init() {
   Store.load();
-  if (!localStorage.getItem('mycolladiegooo-v1')) Store.s.theme = 'dark';
-  Store.seed(); applyTheme();
+  if (!localStorage.getItem('mycolladiegooo-v1')) Store.s.theme = 'light';
+  // Si hay nube configurada, Sync trae los datos reales; no se crean ejemplos
+  const cloudOn = (typeof Sync !== 'undefined' && Sync.willSync && Sync.willSync());
+  if (!cloudOn) Store.seed();
+  applyTheme(); applyAppearance();
+  // Si otro dispositivo cambia la apariencia, aplicarla en vivo
+  try { Store.onChange((kind) => { if (kind === 'remote') applyAppearance(); }); } catch {}
   const dl = $('#subjects-dl'); if (dl) dl.innerHTML = Store.s.subjects.map(s => `<option value="${esc(s.name)}">`).join('');
   $$('.navlink[data-route]').forEach(b => b.onclick = () => nav(b.dataset.route));
   const bm = $('#btn-menu'); if (bm) bm.onclick = () => $('#sidebar').classList.toggle('-translate-x-full');
