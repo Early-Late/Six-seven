@@ -1,5 +1,4 @@
 ## Novedades
-- Estetica oscura con imagenes locales en `assets/` (logo, hero, side, cover, pochita).
 - Fondo blanco (tema claro por defecto, modo oscuro opcional con el botón Oscuro/Claro).
 - Sincronización entre dispositivos: lo que crees en el celular aparece en la PC y viceversa.
 - Sin emojis en la interfaz. Lenguaje neutro.
@@ -36,10 +35,8 @@ Nota: los archivos adjuntos viajan como lista entre equipos, pero su contenido v
 en el equipo donde se subió (límite de los planes gratis). La página avisa en ese caso.
 
 ## Arquitectura
-- **Frontend only, 0 backend**: HTML + Tailwind CDN + JS vanilla (3 módulos clásicos para que funcione con `file://`).
 - **Frontend only, 0 backend**: HTML + Tailwind CDN + JS vanilla (módulos clásicos para que funcione con `file://`).
 - `js/db.js` → IndexedDB `mycolladiegooo-db` guarda los **blobs** de archivos.
-- `js/store.js` → `localStorage` key `mycolladiegooo-v1` guarda tareas, materias, etiquetas y metadatos de archivos.
 - `js/store.js` → `localStorage` key `mycolladiegooo-v1` guarda tareas, materias, etiquetas y metadatos de archivos (+ `rev` y `tombstones` para sincronizar).
 - `js/app.js` → routing por secciones, renders, filtros, modales, drag&drop, preview.
 - `js/sync.js` → sincronización: pestañas del mismo equipo (BroadcastChannel/storage), nube Firebase Realtime Database entre dispositivos, exportar/importar JSON.
@@ -47,7 +44,6 @@ en el equipo donde se subió (límite de los planes gratis). La página avisa en
 
 ## Modelo de datos
 - **Task**: `{id, title, description, subject, teacher, dueDate, priority, status, tags[], links[], notes, favorite, createdAt, updatedAt, fileIds[]}`
-- **FileRec**: `{id, taskId, name, ext, size, uploadedAt}` + blob en IndexedDB con el mismo `id`.
 - **FileRec**: `{id, taskId, docId, name, ext, size, uploadedAt}` + blob en IndexedDB con el mismo `id`.
 - **Appearance**: `{siteName, siteSub, logoLetter, heroTitle, heroSub, tabTitle, brand, brandDark, accent, bg, panel, ink, line, m1, m2, font, radius, dots, grain, btnAnim}` + `appearanceUpdatedAt` (se sincroniza entre dispositivos).
 - **Subject**: `{id, name, color}` · **Tag**: libre por tarea (texto + color auto).
@@ -56,7 +52,6 @@ en el equipo donde se subió (límite de los planes gratis). La página avisa en
 ```
 mycolladiegooo/
   index.html  css/styles.css
-  js/db.js  js/store.js  js/app.js
   js/db.js  js/store.js  js/app.js  js/sync.js
   README.md
 ```
